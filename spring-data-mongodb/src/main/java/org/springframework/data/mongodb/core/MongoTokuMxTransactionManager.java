@@ -82,7 +82,6 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
     CommandResult result = null;
     try {
       DB mongoDB = mtx.getHolder().getDB();
-      //TODO: start grouping requests. mongoOperations.executeInSession() should fail when transactions are used.
       mongoDB.requestStart();
       result = mongoDB.command(command);
     } catch (RuntimeException ex) {
