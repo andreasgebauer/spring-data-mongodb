@@ -1,6 +1,5 @@
 package org.springframework.data.mongodb.core;
 
-import com.mongodb.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -10,6 +9,8 @@ import org.springframework.transaction.support.AbstractPlatformTransactionManage
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.SmartTransactionObject;
 import org.springframework.util.Assert;
+
+import com.mongodb.*;
 
 public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionManager implements InitializingBean {
 
@@ -75,21 +76,25 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
         builder.append("isolation", "mvcc");
         break;
       default:
-        throw new InvalidIsolationLevelException("the requested isolation level " + definition.getIsolationLevel() + " is not supported by tokuMx.");
+        throw new InvalidIsolationLevelException("the requested isolation level " + definition.getIsolationLevel()
+            + " is not supported by tokuMx.");
     }
     MongoDBTransactionObject mtx = (MongoDBTransactionObject) transaction;
     DBObject command = builder.get();
     CommandResult result = null;
+    DB mongoDB = null;
     try {
-      DB mongoDB = mtx.getHolder().getDB();
+      mongoDB = mtx.getHolder().getDB();
       mongoDB.requestStart();
       result = mongoDB.command(command);
     } catch (RuntimeException ex) {
+      MongoDbUtils.closeDB(mongoDB);
       // use MongoExceptionTranslator?
       throw new TransactionSystemException("tokuMx.doBegin: unexpected system exception: " + ex.getMessage(), ex);
     }
     String error = result.getErrorMessage();
     if (error != null) {
+      MongoDbUtils.closeDB(mongoDB);
       throw new CannotCreateTransactionException("execution of " + command.toString() + " failed: " + error);
     }
     logger.trace("tokuMx.doBegin: {}", command);
@@ -100,13 +105,15 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
     MongoDBTransactionObject mtx = (MongoDBTransactionObject) status.getTransaction();
     DBObject command = new BasicDBObject("commitTransaction", Boolean.TRUE);
     CommandResult result = null;
+    DB mongoDB = null;
     try {
-      DB mongoDB = mtx.getHolder().getDB();
+      mongoDB = mtx.getHolder().getDB();
       result = mongoDB.command(command);
-      mongoDB.requestDone();
     } catch (RuntimeException ex) {
       // use MongoExceptionTranslator?
       throw new TransactionSystemException("tokuMx.doCommit: unexpected system exception: " + ex.getMessage(), ex);
+    } finally {
+      MongoDbUtils.closeDB(mongoDB);
     }
     String error = result.getErrorMessage();
     if (error != null) {
@@ -120,17 +127,21 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
     MongoDBTransactionObject mtx = (MongoDBTransactionObject) status.getTransaction();
     DBObject command = new BasicDBObject("rollbackTransaction", Boolean.TRUE);
     CommandResult result = null;
+    DB mongoDB = null;
     try {
-      DB mongoDB = mtx.getHolder().getDB();
+      mongoDB = mtx.getHolder().getDB();
       result = mongoDB.command(command);
       mongoDB.requestDone();
     } catch (RuntimeException ex) {
       // use MongoExceptionTranslator?
       throw new TransactionSystemException("tokuMx.doRollback: unexpected system exception: " + ex.getMessage(), ex);
+    } finally {
+      MongoDbUtils.closeDB(mongoDB);
     }
     String error = result.getErrorMessage();
     if (error != null) {
-      throw new TransactionSystemException("tokuMx.doRollback: execution of " + command.toString() + " failed: " + error);
+      throw new TransactionSystemException("tokuMx.doRollback: execution of " + command.toString() + " failed: "
+          + error);
     }
     logger.trace("tokuMx.doRollback: {}", command);
   }
