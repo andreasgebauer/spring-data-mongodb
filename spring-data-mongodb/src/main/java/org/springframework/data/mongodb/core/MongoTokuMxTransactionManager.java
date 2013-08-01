@@ -21,6 +21,7 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
 
 	private Logger logger = LoggerFactory.getLogger(MongoTokuMxTransactionManager.class);
 	private MongoDbFactory mongoDbFactory;
+	private boolean requestEnsureConnection;
 
 	public MongoTokuMxTransactionManager() {}
 
@@ -44,6 +45,20 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
 	 */
 	public void setMongoDbFactory(MongoDbFactory mongoDbFactory) {
 		this.mongoDbFactory = mongoDbFactory;
+	}
+
+	public boolean isRequestEnsureConnection() {
+		return requestEnsureConnection;
+	}
+
+	/**
+	 * Whether to call db.requestEnsureConnection() on transaction begin.
+	 * 
+	 * @see http://docs.mongodb.org/ecosystem/drivers/java-concurrency/
+	 * @param requestEnsureConnection
+	 */
+	public void setRequestEnsureConnection(boolean requestEnsureConnection) {
+		this.requestEnsureConnection = requestEnsureConnection;
 	}
 
 	@Override
@@ -100,6 +115,9 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
 		try {
 			mongoDB = mtx.getHolder().getDB();
 			mongoDB.requestStart();
+			if (isRequestEnsureConnection()) {
+				mongoDB.requestEnsureConnection();
+			}
 			result = mongoDB.command(command);
 		} catch (RuntimeException ex) {
 			MongoDbUtils.closeDB(mongoDB);
