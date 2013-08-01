@@ -130,7 +130,6 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
 		try {
 			mongoDB = mtx.getHolder().getDB();
 			result = mongoDB.command(command);
-			mongoDB.requestDone();
 		} catch (RuntimeException ex) {
 			// use MongoExceptionTranslator?
 			throw new TransactionSystemException("tokuMx.doRollback: unexpected system exception: " + ex.getMessage(), ex);
