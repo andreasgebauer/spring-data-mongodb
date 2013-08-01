@@ -12,6 +12,11 @@ import org.springframework.util.Assert;
 
 import com.mongodb.*;
 
+/**
+ * Implementation of {@link PlatformTransactionManager} for TokuMX, a MongoDB Engine from Tokutek.
+ * 
+ * @author Lars Uffmann
+ */
 public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionManager implements InitializingBean {
 
 	private Logger logger = LoggerFactory.getLogger(MongoTokuMxTransactionManager.class);
@@ -19,14 +24,24 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
 
 	public MongoTokuMxTransactionManager() {}
 
-	public MongoTokuMxTransactionManager(MongoDbFactory factory) {
-		this.mongoDbFactory = factory;
+	/**
+	 * Constructor accepting the {@link MongoDbFactory} to use.
+	 * 
+	 * @param mongoDbFactory must not be {@literal null}.
+	 */
+	public MongoTokuMxTransactionManager(MongoDbFactory mongoDbFactory) {
+		this.mongoDbFactory = mongoDbFactory;
 	}
 
 	public MongoDbFactory getMongoDbFactory() {
 		return mongoDbFactory;
 	}
 
+	/**
+	 * Set the {@link MongoDbFactory} to use.
+	 * 
+	 * @param mongoDbFactory must not be {@literal null}.
+	 */
 	public void setMongoDbFactory(MongoDbFactory mongoDbFactory) {
 		this.mongoDbFactory = mongoDbFactory;
 	}
@@ -63,7 +78,7 @@ public class MongoTokuMxTransactionManager extends AbstractPlatformTransactionMa
 
 	@Override
 	protected void doBegin(Object transaction, TransactionDefinition definition) throws TransactionException {
-		BasicDBObjectBuilder builder = new BasicDBObjectBuilder().add("beginTransaction", 1);
+		BasicDBObjectBuilder builder = new BasicDBObjectBuilder().add("beginTransaction", Boolean.TRUE);
 		switch (definition.getIsolationLevel()) {
 			case TransactionDefinition.ISOLATION_READ_UNCOMMITTED:
 				builder.append("isolation", "readUncommitted");
